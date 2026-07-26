@@ -158,3 +158,34 @@ textarea {
     border-color: #ffb542 !important;
     color: #ffb542;
 }
+
+/* Browse button */
+.input-with-button {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.input-with-button input {
+    flex: 1;
+}
+
+.browse-btn {
+    width: auto !important;
+    margin: 0 !important;
+    padding: 10px 14px !important;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 181, 66, 0.3);
+    border-radius: 6px;
+    color: #ffffff;
+    box-sizing: border-box;
+    font-size: 0.95rem;
+}
+
+.browse-btn:hover {
+    border-color: #ffb542;
+    color: #1a1a1a;
+}
