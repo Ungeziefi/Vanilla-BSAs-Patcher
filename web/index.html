@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Vanilla BSAs Patcher</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="icon.ico">
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Vanilla BSAs Patcher</h1>
+
+        <div class="card">
+            <h3>Information</h3>
+            <ul>
+                <li><a href="https://www.nexusmods.com/games/newvegas/mods/98738" target="_blank">Mod page</a></li>
+                <li><a href="https://vivanewvegas.moddinglinked.com/utilities.html#Decompressor" target="_blank">Instructions</a> (Viva New Vegas)</li>
+                <li><a href="https://github.com/Ungeziefi/Vanilla-BSAs-Patcher" target="_blank">GitHub repository</a></li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>Options</h3>
+            <label class="checkbox-container">
+                <input type="checkbox" id="decompress" checked>
+                Decompress BSAs <strong>(Recommended for SSDs)</strong>
+            </label>
+            <label class="checkbox-container">
+                <input type="checkbox" id="ogg_to_wav" checked>
+                Convert OGG to WAV <strong>(Fixes missing audio)</strong>
+            </label>
+            <label class="checkbox-container">
+                <input type="checkbox" id="split_mp3" checked>
+                Exclude MP3s from packing <strong>(Fixes music playback)</strong>
+            </label>
+        </div>
+
+        <div class="card">
+            <h3>Paths</h3>
+            <div class="form-group">
+                <label for="data-path">Data folder path:</label>
+                <input type="text" id="data-path" placeholder="Path to Fallout New Vegas/Data" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="custom-path">Custom output path (optional):</label>
+                <input type="text" id="custom-path" placeholder="Leave blank to overwrite Data folder with backup" autocomplete="off">
+            </div>
+        </div>
+
+        <button id="start-btn" onclick="runProcess()">Start</button>
+
+        <div class="card">
+            <div class="progress-bar-container">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+            <textarea id="log-box" readonly placeholder="Output log will appear here..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', async () => {
+            const path = await eel.detect_data_path()();
+            if (path) {
+                document.getElementById('data-path').value = path;
+            }
+        });
+
+        eel.expose(addLog);
+        function addLog(message) {
+            const logBox = document.getElementById('log-box');
+            logBox.value += message + '\n';
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        eel.expose(updateProgress);
+        function updateProgress(percentage) {
+            document.getElementById('progress-bar').style.width = percentage + '%';
+        }
+
+        eel.expose(processFinished);
+        function processFinished(success) {
+            const btn = document.getElementById('start-btn');
+            btn.disabled = false;
+            btn.innerText = "Restart";
+        }
+
+        function runProcess() {
+            const dataPath = document.getElementById('data-path').value.trim();
+            const customPath = document.getElementById('custom-path').value.trim();
+
+            if (!dataPath) {
+                alert("Please enter a valid Data path.");
+                return;
+            }
+
+            const options = {
+                decompress: document.getElementById('decompress').checked,
+                ogg_to_wav: document.getElementById('ogg_to_wav').checked,
+                split_mp3: document.getElementById('split_mp3').checked
+            };
+
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('start-btn').innerText = "Processing...";
+            document.getElementById('log-box').value = "";
+            updateProgress(0);
+
+            eel.start_processing(dataPath, customPath, options);
+        }
+    </script>
+</body>
+
+</html>

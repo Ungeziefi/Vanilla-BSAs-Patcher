@@ -1,0 +1,160 @@
+body {
+    background-color: #282725 !important;
+    color: #e1e1e1;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+
+strong,
+b {
+    color: #ffb542 !important;
+}
+
+.container {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+h1 {
+    margin-bottom: 20px;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    letter-spacing: 0.05em;
+    text-shadow: 0.05em 0.075em 0.15em rgb(0, 0, 0);
+}
+
+h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    color: #ffb542;
+}
+
+a {
+    color: rgb(101, 206, 253);
+    text-decoration: none;
+}
+
+a:hover {
+    color: hsl(199, 83%, 45%);
+}
+
+/* Card */
+.card,
+.card-wj,
+.card-basic,
+.card-green,
+.card-yellow,
+.card-red,
+textarea {
+    padding: 0.8em 1em;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    margin: 0.5em 0;
+    outline: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.13);
+}
+
+.card {
+    background-color: rgba(255, 255, 255, 0.0512);
+}
+
+/* Form */
+.checkbox-container {
+    display: block;
+    margin-bottom: 10px;
+    cursor: pointer;
+    color: #d1d1d1;
+}
+
+.checkbox-container input {
+    margin-right: 10px;
+    accent-color: #ffb542;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+    color: #c0c0c0;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 181, 66, 0.3);
+    border-radius: 6px;
+    color: #ffffff;
+    box-sizing: border-box;
+    font-size: 0.95rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #ffb542;
+}
+
+/* Button */
+button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 50%;
+    padding: 12px;
+    background-color: #ffb542;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    margin: 10px auto 15px auto;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+button:disabled {
+    background-color: #555;
+    color: #888;
+    cursor: not-allowed;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #ffb542;
+    transition: width 0.3s ease;
+}
+
+/* Textarea */
+textarea {
+    resize: none;
+    box-sizing: border-box;
+    width: 100%;
+    height: 180px;
+    font-family: monospace;
+    font-size: 0.9em;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-color: #ffb542 !important;
+    color: #ffb542;
+}
