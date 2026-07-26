@@ -1,2 +1,1 @@
-# Vanilla-BSAs-Patcher
-Decompresses archives, fixes audio, and improves loading time. All configurable through a fancy web UI.
+Nexus Mods page [here](https://www.nexusmods.com/games/newvegas/mods/98738).
