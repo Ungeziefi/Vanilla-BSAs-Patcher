@@ -10,12 +10,15 @@ import tkinter as tk
 from tkinter import filedialog
 from concurrent.futures import ThreadPoolExecutor
 
-BSA_LIST = [
+MAIN_BSA_LIST = [
     "Fallout - Meshes.bsa",
     "Fallout - Misc.bsa",
     "Fallout - Textures.bsa",
     "Fallout - Textures2.bsa",
-    "Fallout - Sound.bsa",
+    "Fallout - Sound.bsa"
+]
+
+DLC_BSA_LIST = [
     "DeadMoney - Sounds.bsa",
     "HonestHearts - Sounds.bsa",
     "LonesomeRoad - Sounds.bsa",
@@ -42,11 +45,11 @@ def detect_data_path():
 def select_folder():
     try:
         root = tk.Tk()
-        root.withdraw()  # Hide the main Tkinter window
-        root.wm_attributes("-topmost", True)  # Bring the dialog to the front
+        root.withdraw()
+        root.wm_attributes("-topmost", True)
         
         folder_selected = filedialog.askdirectory()
-        root.destroy()  # Clean up the hidden window instance
+        root.destroy()
         
         return folder_selected if folder_selected else ""
     except Exception as e:
@@ -66,10 +69,6 @@ def convert_single_ogg(args):
 
 def convert_audio(temp_dir, current_dir):
     ffmpeg_exe = os.path.join(current_dir, "ffmpeg.exe")
-    if not os.path.exists(ffmpeg_exe):
-        log_to_ui("Warning: ffmpeg.exe not found. Make sure you extracted everything from the downloaded archive. Skipping OGG to WAV conversion.")
-        return
-    
     log_to_ui("Converting OGG files to WAV...")
     creation_flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
@@ -79,7 +78,7 @@ def convert_audio(temp_dir, current_dir):
             if file.lower().endswith(".ogg"):
                 ogg_files.append((os.path.join(root, file), ffmpeg_exe, creation_flags))
 
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+    with ThreadPoolExecutor(max_workers=os.cpu_count() - 1) as executor:
         list(executor.map(convert_single_ogg, ogg_files))
 
 def extract_mp3s(temp_dir, mp3_output_dir):
@@ -104,21 +103,45 @@ def process_bsas_thread(data_path, custom_path, options):
     output_dir = custom_path if custom_path else data_path
     is_game_folder = (output_dir == data_path)
 
+    # Prechecks
+    bsarch_exe = os.path.join(current_dir, "BSArch.exe")
+    xdelta_exe = os.path.join(current_dir, "xdelta3.exe")
+    ffmpeg_exe = os.path.join(current_dir, "ffmpeg.exe")
+    vcdiff = os.path.join(current_dir, "Fallout - Misc.vcdiff")
+
+    log_to_ui("Running prechecks...")
+
+    if not os.path.exists(bsarch_exe):
+        log_to_ui("Error: BSArch.exe not found. Make sure you extracted everything from the downloaded archive.")
+        eel.processFinished(False)
+        return
+
+    if not os.path.exists(xdelta_exe):
+        log_to_ui("Error: xdelta3.exe not found. Make sure you extracted everything from the downloaded archive.")
+        eel.processFinished(False)
+        return
+
+    if not os.path.exists(ffmpeg_exe):
+        log_to_ui("Error: ffmpeg.exe not found. Make sure you extracted everything from the downloaded archive.")
+        eel.processFinished(False)
+        return
+
+    if not os.path.exists(vcdiff):
+        log_to_ui("Error: Fallout - Misc.vcdiff not found. Make sure you extracted everything from the downloaded archive.")
+        eel.processFinished(False)
+        return
+
     try:
         os.makedirs(output_dir, exist_ok=True)
     except OSError as e:
         log_to_ui(f"Error: Could not create output directory '{output_dir}': {e}")
         eel.processFinished(False)
         return
-
-    # Prechecks
-    log_to_ui("Running prechecks...")
-
-    # Free space
-    REQUIRED_STORAGE_BYTES = 8 * 1024 * 1024 * 1024
+    
+    REQUIRED_STORAGE_BYTES = 8 * 1024 * 1024 * 1024  # 8GB
     try:
         total, _, free = shutil.disk_usage(output_dir)
-        free_gb = free / (1024 ** 3) # Convert to GB
+        free_gb = free / (1024 ** 3)
         if free < REQUIRED_STORAGE_BYTES:
             log_to_ui(f"Error: Insufficient free disk space. Required: 8GB, available: {free_gb:.3f}GB.")
             eel.processFinished(False)
@@ -126,7 +149,6 @@ def process_bsas_thread(data_path, custom_path, options):
     except OSError as e:
         log_to_ui(f"Warning: Could not check for free disk space: {e}")
 
-    # Program Files x86
     norm_output = os.path.normpath(output_dir).lower()
     pf_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)").lower()
 
@@ -135,7 +157,6 @@ def process_bsas_thread(data_path, custom_path, options):
 
     log_to_ui("Prechecks completed.\n")
 
-    # Processing
     backup_dir = None
     if is_game_folder:
         backup_dir = os.path.join(data_path, "Vanilla BSAs backup")
@@ -146,32 +167,43 @@ def process_bsas_thread(data_path, custom_path, options):
             eel.processFinished(False)
             return
 
-    bsarch_exe = os.path.join(current_dir, "BSArch.exe")
-    xdelta_exe = os.path.join(current_dir, "xdelta3.exe")
-
     creation_flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
-    if not os.path.exists(bsarch_exe):
-        log_to_ui("Error: BSArch.exe not found. Make sure you extracted everything from the downloaded archive.")
-        eel.processFinished(False)
-        return
-
+    # Processing
     try:
-        total = len(BSA_LIST)
-        for idx, bsa_name in enumerate(BSA_LIST):
+        active_bsas = []
+
+        # Check for all main BSAs
+        for bsa_name in MAIN_BSA_LIST:
+            bsa_path = os.path.join(data_path, bsa_name)
+            backup_bsa_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
+            if not os.path.exists(bsa_path) and not (backup_dir and os.path.exists(backup_bsa_path)):
+                log_to_ui(f"Error: '{bsa_name}' is required but was not found!")
+                eel.processFinished(False)
+                return
+            active_bsas.append(bsa_name)
+
+        # Any DLC could be missing, that's fine
+        for bsa_name in DLC_BSA_LIST:
+            bsa_path = os.path.join(data_path, bsa_name)
+            backup_bsa_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
+            if os.path.exists(bsa_path) or (backup_dir and os.path.exists(backup_bsa_path)):
+                active_bsas.append(bsa_name)
+            else:
+                log_to_ui(f"'{bsa_name}' not found. Skipping.")
+
+        total = len(active_bsas)
+        for idx, bsa_name in enumerate(active_bsas):
             eel.updateProgress(int(((idx) / total) * 100))
             log_to_ui(f"\nProcessing: {bsa_name}")
 
             bsa_path = os.path.join(data_path, bsa_name)
-            if not os.path.exists(bsa_path) and backup_dir:
-                bsa_path = os.path.join(backup_dir, bsa_name)
+            backup_bsa_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
 
-            if not os.path.exists(bsa_path):
-                log_to_ui(f"Could not find '{bsa_name}'. Skipping.")
-                continue
+            if not os.path.exists(bsa_path) and backup_dir and os.path.exists(backup_bsa_path):
+                bsa_path = backup_bsa_path
 
             if is_game_folder and os.path.dirname(bsa_path) != backup_dir:
-                backup_bsa_path = os.path.join(backup_dir, bsa_name)
                 log_to_ui("Backing up BSA...")
                 try:
                     shutil.move(bsa_path, backup_bsa_path)
@@ -184,28 +216,33 @@ def process_bsas_thread(data_path, custom_path, options):
             with tempfile.TemporaryDirectory() as temp_dir:
 
                 temp_patched_bsa = None
+                # Delta patch
                 if bsa_name.lower() == "fallout - misc.bsa" and os.path.exists(xdelta_exe):
                     patch_path = os.path.join(current_dir, "Fallout - Misc.vcdiff")
-                    if os.path.exists(patch_path):
-                        log_to_ui("Delta patching Fallout - Misc.bsa...")
-                        temp_patched_bsa = os.path.join(temp_dir, "Fallout - Misc_patched.bsa")
-                        xdelta_cmd = [xdelta_exe, "-d", "-f", "-s", bsa_path, patch_path, temp_patched_bsa]
-                        res = subprocess.run(xdelta_cmd, capture_output=True, text=True, creationflags=creation_flags)
-                        if res.returncode == 0:
-                            bsa_path = temp_patched_bsa
-                        else:
-                            log_to_ui(f"xdelta error: {res.stderr.strip()}")
+                    log_to_ui("Delta patching Fallout - Misc.bsa...")
+                    temp_patched_bsa = os.path.join(temp_dir, "Fallout - Misc_patched.bsa")
+                    xdelta_cmd = [xdelta_exe, "-d", "-f", "-s", bsa_path, patch_path, temp_patched_bsa]
+                    
+                    res = subprocess.run(xdelta_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=creation_flags)
+                    if res.returncode == 0:
+                        bsa_path = temp_patched_bsa
+                    else:
+                        log_to_ui(f"xdelta error: {res.stdout.strip()}")
+                        eel.processFinished(False)
+                        return
 
-                log_to_ui("Unpacking archive...")
-                unpack_cmd = [bsarch_exe, "unpack", bsa_path, temp_dir]
-                res_unpack = subprocess.run(unpack_cmd, capture_output=True, text=True, creationflags=creation_flags)
+                # Unpack
+                log_to_ui("Unpacking BSA...")
+                unpack_cmd = [bsarch_exe, "unpack", bsa_path, temp_dir, "-fnv"]
+                
+                res_unpack = subprocess.run(unpack_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=creation_flags)
 
                 if res_unpack.returncode != 0:
-                    # log_to_ui(f"Unpacking failed: {res_unpack.stderr.strip()}") # Doesn't pass the error, not sure why
-                    log_to_ui(f"Unpacking failed.")
-                    continue
+                    log_to_ui(f"Unpacking failed for {bsa_name}: {res_unpack.stdout.strip() or 'Unknown error'}")
+                    eel.processFinished(False)
+                    return
 
-                # Remove broken file
+                # Remove s.txt
                 if bsa_name.lower() == "fallout - misc.bsa":
                     bad_file = os.path.join(temp_dir, "menus", "s.txt")
                     if os.path.exists(bad_file):
@@ -215,11 +252,12 @@ def process_bsas_thread(data_path, custom_path, options):
                         except OSError as e:
                             log_to_ui(f"Warning: Could not remove broken 'menus/s.txt': {e}")
 
+                    # Merge Misc and Meshes2
                     meshes2_path = os.path.join(output_dir, "Fallout - Meshes2.bsa")
                     if os.path.exists(meshes2_path):
                         log_to_ui("Merging Meshes2 BSA with Misc BSA...")
-                        unpack_cmd2 = [bsarch_exe, "unpack", meshes2_path, temp_dir]
-                        res2 = subprocess.run(unpack_cmd2, capture_output=True, text=True, creationflags=creation_flags)
+                        unpack_cmd2 = [bsarch_exe, "unpack", meshes2_path, temp_dir, "-fnv"]
+                        res2 = subprocess.run(unpack_cmd2, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=creation_flags)
                         if res2.returncode == 0:
                             try:
                                 os.remove(meshes2_path)
@@ -232,6 +270,7 @@ def process_bsas_thread(data_path, custom_path, options):
                 if options.get("ogg_to_wav"):
                     convert_audio(temp_dir, current_dir)
 
+                # Repack
                 output_bsa_path = os.path.join(output_dir, bsa_name)
                 log_to_ui(f"Repacking: {output_bsa_path}")
                 
@@ -245,10 +284,11 @@ def process_bsas_thread(data_path, custom_path, options):
                 if not options.get("decompress"):
                     pack_cmd.append("-z")
 
-                res_pack = subprocess.run(pack_cmd, capture_output=True, text=True, creationflags=creation_flags)
+                res_pack = subprocess.run(pack_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=creation_flags)
                 if res_pack.returncode != 0:
-                    # log_to_ui(f"Packing failed: {res_unpack.stderr.strip()}") # Doesn't pass the error, not sure why
-                    log_to_ui(f"Packing failed.")
+                    log_to_ui(f"Packing failed for {bsa_name}: {res_pack.stdout.strip() or 'Unknown error'}")
+                    eel.processFinished(False)
+                    return
                 else:
                     log_to_ui(f"Done with {bsa_name}.")
 
