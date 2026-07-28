@@ -134,34 +134,41 @@ textarea {
     font-family: monospace;
     font-size: 0.9em;
     background-color: rgba(0, 0, 0, 0.3);
-    border-color: #ffb542 !important;
-    color: #ffb542;
+    border-color: #ffb542;
+    color: #fff;
+}
+
+textarea::placeholder {
+    color: #fff;
 }
 
 /* Browse button */
 .input-with-button {
+    position: relative;
     display: flex;
-    gap: 8px;
     align-items: center;
 }
 
 .input-with-button input {
     flex: 1;
+    margin-bottom: 0;
 }
 
 .browse-btn {
+    position: absolute;
+    right: 12px;
     width: auto;
-    margin: 0;
-    padding-right: 14px;
+    margin-top: 18px;
+    padding: 0;
     cursor: pointer;
-    transition: border-color 0.2s;
-    background-color: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 181, 66, 0.3);
-    font-size: 1rem;
+    background: transparent;
+    color: #888;
+    transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .browse-btn:hover {
-    transition: scale 0.2s ease;
+    color: #fff;
+    transform: scale(1.1);
 }
 
 /* Links */
