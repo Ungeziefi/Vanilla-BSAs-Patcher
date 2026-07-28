@@ -2,7 +2,6 @@ body {
     background-color: #282725 !important;
     color: #e1e1e1;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
     padding: 20px;
 }
 
@@ -28,26 +27,11 @@ h1 {
 h3 {
     margin-top: 0;
     margin-bottom: 12px;
-    font-size: 1.1rem;
     color: #ffb542;
-}
-
-a {
-    color: rgb(101, 206, 253);
-    text-decoration: none;
-}
-
-a:hover {
-    color: hsl(199, 83%, 45%);
 }
 
 /* Card */
 .card,
-.card-wj,
-.card-basic,
-.card-green,
-.card-yellow,
-.card-red,
 textarea {
     padding: 0.8em 1em;
     border-radius: 8px;
@@ -66,54 +50,41 @@ textarea {
     display: block;
     margin-bottom: 10px;
     cursor: pointer;
-    color: #d1d1d1;
 }
 
 .checkbox-container input {
     margin-right: 10px;
-    accent-color: #ffb542;
-}
-
-.form-group {
-    margin-bottom: 12px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 0.9rem;
-    color: #c0c0c0;
+    accent-color: hsl(199, 83%, 45%);
 }
 
 .form-group input {
-    width: 100%;
-    padding: 10px;
+    padding: 12px;
+    margin-top: 4px;
+    margin-bottom: 16px;
     background-color: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 181, 66, 0.3);
     border-radius: 6px;
-    color: #ffffff;
-    box-sizing: border-box;
-    font-size: 0.95rem;
+    color: #fff;
+    font-size: 1rem;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+input:hover {
     outline: none;
-    border-color: #ffb542;
+    border: 1px solid #ffb542;
 }
 
 /* Button */
 button {
     display: flex;
     justify-content: center;
-    align-items: center;
     width: 50%;
     padding: 12px;
     background-color: #ffb542;
-    color: #1a1a1a;
     border: none;
     border-radius: 6px;
     font-weight: bold;
-    font-size: 1rem;
+    font-size: 1.3rem;
     cursor: pointer;
     transition: opacity 0.2s, transform 0.1s;
     margin: 10px auto 15px auto;
@@ -121,6 +92,14 @@ button {
 
 button:hover {
     opacity: 0.9;
+}
+
+button i {
+    transition: transform 0.2s ease;
+}
+
+button:hover i {
+    transform: scale(1.2);
 }
 
 button:disabled {
@@ -171,21 +150,41 @@ textarea {
 }
 
 .browse-btn {
-    width: auto !important;
-    margin: 0 !important;
-    padding: 10px 14px !important;
+    width: auto;
+    margin: 0;
+    padding-right: 14px;
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
-
+    transition: border-color 0.2s;
     background-color: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 181, 66, 0.3);
-    border-radius: 6px;
-    color: #ffffff;
-    box-sizing: border-box;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
 .browse-btn:hover {
-    border-color: #ffb542;
-    color: #1a1a1a;
+    transition: scale 0.2s ease;
+}
+
+/* Links */
+.links-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.links-icons {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    font-size: 1.75rem;
+}
+
+.links-icons a {
+    color: #888;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.links-icons a:hover {
+    color: #fff;
+    transform: scale(1.2);
 }
