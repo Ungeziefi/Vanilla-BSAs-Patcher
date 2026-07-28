@@ -57,7 +57,30 @@ def select_folder():
         return ""
 
 def convert_single_ogg(args):
-    ogg_path, ffmpeg_exe, creation_flags = args
+    ogg_path, ffmpeg_exe, creation_flags, temp_dir = args
+    
+    # Based on what FNV BSA Decompressor skips
+    skip_folders = {
+        os.path.normpath("sound/songs"),
+        os.path.normpath("sound/fx/mus"),
+        os.path.normpath("sound/fx/npc/doggod"),
+        os.path.normpath("sound/fx/drs/doggate"),
+        os.path.normpath("sound/fx/emt/raintoggle")
+    }
+
+    rel_path = os.path.relpath(ogg_path, temp_dir)
+    path_parts = os.path.normpath(rel_path).split(os.sep)
+    
+    should_skip = False
+    for skip_folder in skip_folders:
+        skip_parts = skip_folder.split(os.sep)
+        if len(path_parts) >= len(skip_parts) and path_parts[:len(skip_parts)] == skip_parts:
+            should_skip = True
+            break
+            
+    if should_skip:
+        return
+
     wav_path = os.path.splitext(ogg_path)[0] + ".wav"
     cmd = [ffmpeg_exe, "-y", "-i", ogg_path, "-acodec", "pcm_s16le", wav_path]
     result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
@@ -76,7 +99,7 @@ def convert_audio(temp_dir, current_dir):
     for root, _, files in os.walk(temp_dir):
         for file in files:
             if file.lower().endswith(".ogg"):
-                ogg_files.append((os.path.join(root, file), ffmpeg_exe, creation_flags))
+                ogg_files.append((os.path.join(root, file), ffmpeg_exe, creation_flags, temp_dir))
 
     with ThreadPoolExecutor(max_workers=os.cpu_count() - 1) as executor:
         list(executor.map(convert_single_ogg, ogg_files))
@@ -134,10 +157,26 @@ def process_bsas_thread(data_path, custom_path, options):
     try:
         os.makedirs(output_dir, exist_ok=True)
     except OSError as e:
-        log_to_ui(f"Error: Could not create output directory '{output_dir}': {e}")
+        log_to_ui(f"Error: Could not create a custom output directory at '{output_dir}': {e}")
         eel.processFinished(False)
         return
-    
+
+    # Check if the custom output folder is empty, but having meta.ini is ok (MO2 mod)
+    if custom_path:
+        try:
+            existing_items = [
+                f for f in os.listdir(output_dir) 
+                if f.lower() != "meta.ini"
+            ]
+            if existing_items:
+                log_to_ui(f"Error: The custom output directory must be empty (ignoring meta.ini).")
+                eel.processFinished(False)
+                return
+        except OSError as e:
+            log_to_ui(f"Error: Could not read the custom output directory '{output_dir}': {e}")
+            eel.processFinished(False)
+            return
+        
     REQUIRED_STORAGE_BYTES = 8 * 1024 * 1024 * 1024  # 8GB
     try:
         total, _, free = shutil.disk_usage(output_dir)
@@ -155,7 +194,7 @@ def process_bsas_thread(data_path, custom_path, options):
     if norm_output.startswith(pf_x86):
         log_to_ui("Warning: Game directory is located in 'Program Files (x86)'. Windows UAC may cause permission issues, but the patcher will continue.")
 
-    log_to_ui("Prechecks completed.\n")
+    log_to_ui("Prechecks completed.")
 
     backup_dir = None
     if is_game_folder:
@@ -190,12 +229,12 @@ def process_bsas_thread(data_path, custom_path, options):
             if os.path.exists(bsa_path) or (backup_dir and os.path.exists(backup_bsa_path)):
                 active_bsas.append(bsa_name)
             else:
-                log_to_ui(f"'{bsa_name}' not found. Skipping.")
+                log_to_ui(f"Warning: '{bsa_name}' not found. Skipping, but note that having all DLCs is fundamental to modding.")
 
         total = len(active_bsas)
         for idx, bsa_name in enumerate(active_bsas):
             eel.updateProgress(int(((idx) / total) * 100))
-            log_to_ui(f"\nProcessing: {bsa_name}")
+            log_to_ui(f"Processing: {bsa_name}")
 
             bsa_path = os.path.join(data_path, bsa_name)
             backup_bsa_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
@@ -281,6 +320,7 @@ def process_bsas_thread(data_path, custom_path, options):
                         log_to_ui(f"Warning: Could not remove existing BSA before repacking: {e}")
 
                 pack_cmd = [bsarch_exe, "pack", temp_dir, output_bsa_path, "-fnv"]
+
                 if not options.get("decompress"):
                     pack_cmd.append("-z")
 
@@ -293,7 +333,7 @@ def process_bsas_thread(data_path, custom_path, options):
                     log_to_ui(f"Done with {bsa_name}.")
 
         eel.updateProgress(100)
-        log_to_ui("\nPatching successful!")
+        log_to_ui("Patching successful!")
         eel.processFinished(True)
 
     except Exception as e:
