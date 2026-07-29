@@ -120,7 +120,7 @@ button:disabled {
 .progress-bar {
     width: 0%;
     height: 100%;
-    background-color: #ffb542;
+    background-color: #71e075;
     transition: width 0.3s ease;
 }
 
