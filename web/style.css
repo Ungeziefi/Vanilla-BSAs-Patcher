@@ -232,3 +232,28 @@ a:hover {
     color: green;
     font-weight: bold;
 }
+
+/* Scrollbar */
+.log-container {
+    scrollbar-width: thin;
+    scrollbar-color: #555 rgba(0, 0, 0, 0.3);
+}
+
+.log-container::-webkit-scrollbar {
+    width: 12px;
+}
+
+.log-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+    background-color: rgba(143, 143, 143, 0.63);
+    border-radius: 20px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(240, 240, 240, 0.63);
+    border-radius: 20px;
+    scale: 10%;
+}
