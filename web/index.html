@@ -87,11 +87,18 @@
         function addLog(message) {
             const logBox = document.getElementById('log-box');
 
+            // Line break if empty
+            if (!message) {
+                logBox.innerHTML += `<br>`;
+                logBox.scrollTop = logBox.scrollHeight;
+                return;
+            }
+
             let formattedMessage = message;
             let containerClass = '';
 
             // Success
-            if (/successful/i.test(message)) {
+            if (/passed/i.test(message) || /success/i.test(message)) {
                 containerClass = 'log-success';
             } else {
                 // Error and warning
@@ -123,12 +130,13 @@
             }
         }
 
-        eel.expose(processFinished);
-        function processFinished(success) {
-            const btn = document.getElementById('start-btn');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa fa-repeat"></i>';
+        function confirmExit(e) {
+            e.preventDefault();
+            e.returnValue = "";
+            return "";
         }
+
+        const btn = document.getElementById('start-btn');
 
         function runProcess() {
             const dataPath = document.getElementById('data-path').value.trim();
@@ -145,12 +153,36 @@
                 split_mp3: document.getElementById('split_mp3').checked
             };
 
-            document.getElementById('start-btn').disabled = true;
-            document.getElementById('start-btn').innerText = "Processing...";
+            // Disable everything while processing
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+            document.getElementById('data-path').disabled = true;
+            document.getElementById('custom-path').disabled = true;
+            document.querySelectorAll('.card input[type="checkbox"]').forEach(cb => cb.disabled = true);
+            document.querySelectorAll('.browse-btn').forEach(btn => btn.disabled = true);
+
+            // Warn if exiting while processing
+            window.addEventListener('beforeunload', confirmExit);
+
             document.getElementById('log-box').innerHTML = "";
             updateProgress(0);
 
             eel.start_processing(dataPath, customPath, options);
+        }
+
+        eel.expose(processFinished);
+        function processFinished(success) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-repeat"></i>';
+
+            // Restore when done
+            document.getElementById('data-path').disabled = false;
+            document.getElementById('custom-path').disabled = false;
+            document.querySelectorAll('.card input[type="checkbox"]').forEach(cb => cb.disabled = false);
+            document.querySelectorAll('.browse-btn').forEach(btn => btn.disabled = false);
+
+            // Remove warning
+            window.removeEventListener('beforeunload', confirmExit);
         }
     </script>
 </body>

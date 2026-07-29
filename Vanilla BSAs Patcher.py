@@ -25,7 +25,7 @@ DLC_BSA_LIST = [
     "OldWorldBlues - Sounds.bsa"
 ]
 
-def log_to_ui(msg):
+def log_to_ui(msg=""):
     eel.addLog(msg)
 
 @eel.expose
@@ -194,7 +194,8 @@ def process_bsas_thread(data_path, custom_path, options):
     if norm_output.startswith(pf_x86):
         log_to_ui("Warning: Game directory is located in 'Program Files (x86)'. Windows UAC may cause permission issues, but the patcher will continue.")
 
-    log_to_ui("Prechecks completed.")
+    log_to_ui("All prechecks passed.")
+    log_to_ui()
 
     backup_dir = None
     if is_game_folder:
@@ -229,12 +230,12 @@ def process_bsas_thread(data_path, custom_path, options):
             if os.path.exists(bsa_path) or (backup_dir and os.path.exists(backup_bsa_path)):
                 active_bsas.append(bsa_name)
             else:
-                log_to_ui(f"Warning: '{bsa_name}' not found. Skipping, but note that having all DLCs is fundamental to modding.")
+                log_to_ui(f"Warning: '{bsa_name}' not found, skipping. Do note that having all DLCs is fundamental to modding.")
 
         total = len(active_bsas)
         for idx, bsa_name in enumerate(active_bsas):
             eel.updateProgress(int(((idx) / total) * 100))
-            log_to_ui(f"Processing: {bsa_name}")
+            log_to_ui(f"> Processing '{bsa_name}'...")
 
             bsa_path = os.path.join(data_path, bsa_name)
             backup_bsa_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
@@ -243,14 +244,18 @@ def process_bsas_thread(data_path, custom_path, options):
                 bsa_path = backup_bsa_path
 
             if is_game_folder and os.path.dirname(bsa_path) != backup_dir:
-                log_to_ui("Backing up BSA...")
-                try:
-                    shutil.move(bsa_path, backup_bsa_path)
+                if os.path.exists(backup_bsa_path):
+                    log_to_ui(f"Reusing existing backup.")
                     bsa_path = backup_bsa_path
-                except OSError as e:
-                    log_to_ui(f"Error: Failed to backup '{bsa_name}': {e}")
-                    eel.processFinished(False)
-                    return
+                else:
+                    log_to_ui(f"Backing up...")
+                    try:
+                        shutil.move(bsa_path, backup_bsa_path)
+                        bsa_path = backup_bsa_path
+                    except OSError as e:
+                        log_to_ui(f"Error: Failed to backup: {e}")
+                        eel.processFinished(False)
+                        return
 
             with tempfile.TemporaryDirectory() as temp_dir:
 
@@ -258,7 +263,7 @@ def process_bsas_thread(data_path, custom_path, options):
                 # Delta patch
                 if bsa_name.lower() == "fallout - misc.bsa" and os.path.exists(xdelta_exe):
                     patch_path = os.path.join(current_dir, "Fallout - Misc.vcdiff")
-                    log_to_ui("Delta patching Fallout - Misc.bsa...")
+                    log_to_ui("Applying delta patch....")
                     temp_patched_bsa = os.path.join(temp_dir, "Fallout - Misc_patched.bsa")
                     xdelta_cmd = [xdelta_exe, "-d", "-f", "-s", bsa_path, patch_path, temp_patched_bsa]
                     
@@ -266,18 +271,18 @@ def process_bsas_thread(data_path, custom_path, options):
                     if res.returncode == 0:
                         bsa_path = temp_patched_bsa
                     else:
-                        log_to_ui(f"xdelta error: {res.stdout.strip()}")
+                        log_to_ui(f"Error: xdelta failed: {res.stdout.strip()}")
                         eel.processFinished(False)
                         return
 
                 # Unpack
-                log_to_ui("Unpacking BSA...")
+                log_to_ui(f"Unpacking...")
                 unpack_cmd = [bsarch_exe, "unpack", bsa_path, temp_dir, "-fnv"]
                 
                 res_unpack = subprocess.run(unpack_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=creation_flags)
 
                 if res_unpack.returncode != 0:
-                    log_to_ui(f"Unpacking failed for {bsa_name}: {res_unpack.stdout.strip() or 'Unknown error'}")
+                    log_to_ui(f"Error: Unpacking failed: {res_unpack.stdout.strip() or 'Unknown error'}")
                     eel.processFinished(False)
                     return
 
@@ -287,14 +292,14 @@ def process_bsas_thread(data_path, custom_path, options):
                     if os.path.exists(bad_file):
                         try:
                             os.remove(bad_file)
-                            log_to_ui("Removed broken 'menus/s.txt'.")
+                            log_to_ui("Removed broken file 'menus/s.txt'.")
                         except OSError as e:
                             log_to_ui(f"Warning: Could not remove broken 'menus/s.txt': {e}")
 
                     # Merge Misc and Meshes2
                     meshes2_path = os.path.join(output_dir, "Fallout - Meshes2.bsa")
                     if os.path.exists(meshes2_path):
-                        log_to_ui("Merging Meshes2 BSA with Misc BSA...")
+                        log_to_ui("Merging Meshes2 and Misc BSAs...")
                         unpack_cmd2 = [bsarch_exe, "unpack", meshes2_path, temp_dir, "-fnv"]
                         res2 = subprocess.run(unpack_cmd2, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=creation_flags)
                         if res2.returncode == 0:
@@ -311,7 +316,7 @@ def process_bsas_thread(data_path, custom_path, options):
 
                 # Repack
                 output_bsa_path = os.path.join(output_dir, bsa_name)
-                log_to_ui(f"Repacking: {output_bsa_path}")
+                log_to_ui(f"Repacking...")
                 
                 if os.path.exists(output_bsa_path):
                     try:
@@ -326,11 +331,12 @@ def process_bsas_thread(data_path, custom_path, options):
 
                 res_pack = subprocess.run(pack_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=creation_flags)
                 if res_pack.returncode != 0:
-                    log_to_ui(f"Packing failed for {bsa_name}: {res_pack.stdout.strip() or 'Unknown error'}")
+                    log_to_ui(f"Error: Packing failed: {res_pack.stdout.strip() or 'Unknown error'}")
                     eel.processFinished(False)
                     return
                 else:
-                    log_to_ui(f"Done with {bsa_name}.")
+                    log_to_ui(f"Done with '{bsa_name}'.")
+                    log_to_ui()
 
         eel.updateProgress(100)
         log_to_ui("Patching successful!")
