@@ -18,6 +18,10 @@
         <div class="card">
             <h3>Options</h3>
             <label class="checkbox-container">
+                <input type="checkbox" id="verify_hashes" checked onchange="validateOptions()">
+                Verify hashes before patching (disable if using a game language other than English)
+            </label>
+            <label class="checkbox-container">
                 <input type="checkbox" id="decompress" checked onchange="validateOptions()">
                 Decompress BSAs (recommended on SSD)
             </label>
@@ -97,11 +101,11 @@
             let formattedMessage = message;
             let containerClass = '';
 
-            // Success
-            if (/passed/i.test(message) || /success/i.test(message)) {
+            // Success (whole line)
+            if (/passed/i.test(message) || /success/i.test(message) || /verified/i.test(message)) {
                 containerClass = 'log-success';
             } else {
-                // Error and warning
+                // Error and warning (just the word)
                 formattedMessage = message
                     .replace(/error/gi, '<span class="log-error">$&</span>')
                     .replace(/warning/gi, '<span class="log-warning">$&</span>');
@@ -117,6 +121,7 @@
         }
 
         function validateOptions() {
+            const verify_hashes = document.getElementById('verify_hashes').checked;
             const decompress = document.getElementById('decompress').checked;
             const oggToWav = document.getElementById('ogg_to_wav').checked;
             const splitMp3 = document.getElementById('split_mp3').checked;
@@ -148,6 +153,7 @@
             }
 
             const options = {
+                verify_hashes: document.getElementById('verify_hashes').checked,
                 decompress: document.getElementById('decompress').checked,
                 ogg_to_wav: document.getElementById('ogg_to_wav').checked,
                 split_mp3: document.getElementById('split_mp3').checked
