@@ -104,7 +104,7 @@ def process_bsas_thread(data_path, custom_path, options):
     log_to_ui("Running prechecks...")
     for path, name in [(bsarch_exe, "BSArch.exe"), (xdelta_exe, "xdelta3.exe"), (ffmpeg_exe, "ffmpeg.exe"), (vcdiff, "Fallout - Misc.vcdiff")]:
         if not os.path.exists(path):
-            log_to_ui(f"Error: {name} not found.")
+            log_to_ui(f"Error: {name} not found. Make sure to extract everything from the downloaded archive.")
             return eel.processFinished(False)
 
     if os.path.exists(os.path.join(data_path, "Fallout - Meshes2.bsa")):
