@@ -159,8 +159,9 @@ def process_bsas_thread(data_path, custom_path, options):
                     log_to_ui(f"Warning: '{bsa_name}' not found, skipping.")
                     continue
 
-                if calculate_blake3(target) != expected_hash:
-                    log_to_ui(f"Error: Hash mismatch for '{bsa_name}'!")
+                target_hash = calculate_blake3(target)
+                if target_hash != expected_hash:
+                    log_to_ui(f"Error: Hash mismatch for '{bsa_name}'! Expected: {expected_hash}, got: {target_hash}")
                     log_to_ui()
                     log_to_ui("If your game language is set to English, verify the files. If it is in another language, disable the hash verification option above, as it is only a safety measure.")
                     return eel.processFinished(False)
@@ -168,6 +169,8 @@ def process_bsas_thread(data_path, custom_path, options):
                 active_bsas.append(bsa_name)
 
             log_to_ui("Hashes verified.")
+            log_to_ui()
+            
         else:
             log_to_ui("Hash verification skipped.")
             log_to_ui()
