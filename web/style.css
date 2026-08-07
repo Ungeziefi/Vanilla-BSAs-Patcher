@@ -31,8 +31,7 @@ h3 {
 }
 
 /* Card */
-.card,
-textarea {
+.card {
     padding: 0.8em 1em;
     border-radius: 8px;
     border: 1px solid transparent;
@@ -122,19 +121,6 @@ button:disabled {
     height: 100%;
     background-color: #71e075;
     transition: width 0.3s ease;
-}
-
-/* Textarea */
-textarea {
-    resize: none;
-    box-sizing: border-box;
-    width: 100%;
-    height: 180px;
-    font-family: monospace;
-    font-size: 0.9em;
-    background-color: rgba(0, 0, 0, 0.3);
-    border-color: #ffb542;
-    color: #fff;
 }
 
 /* Browse button */

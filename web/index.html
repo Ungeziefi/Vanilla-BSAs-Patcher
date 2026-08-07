@@ -18,8 +18,12 @@
         <div class="card">
             <h3>Options</h3>
             <label class="checkbox-container">
-                <input type="checkbox" id="verify_hashes" checked onchange="validateOptions()">
-                Verify hashes before patching (disable if using a game language other than English)
+                <input type="checkbox" id="backup_bsas" checked>
+                Create backups when processing archives directly in Data
+            </label>
+            <label class="checkbox-container">
+                <input type="checkbox" id="verify_hashes" checked>
+                Verify hashes before patching (disable if the game is not in English)
             </label>
             <label class="checkbox-container">
                 <input type="checkbox" id="decompress" checked onchange="validateOptions()">
@@ -121,7 +125,6 @@
         }
 
         function validateOptions() {
-            const verify_hashes = document.getElementById('verify_hashes').checked;
             const decompress = document.getElementById('decompress').checked;
             const oggToWav = document.getElementById('ogg_to_wav').checked;
             const splitMp3 = document.getElementById('split_mp3').checked;
@@ -153,6 +156,7 @@
             }
 
             const options = {
+                backup_bsas: document.getElementById('backup_bsas').checked,
                 verify_hashes: document.getElementById('verify_hashes').checked,
                 decompress: document.getElementById('decompress').checked,
                 ogg_to_wav: document.getElementById('ogg_to_wav').checked,
@@ -161,13 +165,12 @@
 
             // Disable everything while processing
             btn.disabled = true;
-            btn.innerText = "Processing...";
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
             document.getElementById('data-path').disabled = true;
             document.getElementById('custom-path').disabled = true;
             document.querySelectorAll('.card input[type="checkbox"]').forEach(cb => cb.disabled = true);
-            document.querySelectorAll('.browse-btn').forEach(btn => btn.disabled = true);
+            document.querySelectorAll('.browse-btn').forEach(b => b.disabled = true);
 
-            // Warn if exiting while processing
             window.addEventListener('beforeunload', confirmExit);
 
             document.getElementById('log-box').innerHTML = "";
@@ -185,7 +188,7 @@
             document.getElementById('data-path').disabled = false;
             document.getElementById('custom-path').disabled = false;
             document.querySelectorAll('.card input[type="checkbox"]').forEach(cb => cb.disabled = false);
-            document.querySelectorAll('.browse-btn').forEach(btn => btn.disabled = false);
+            document.querySelectorAll('.browse-btn').forEach(b => b.disabled = false);
 
             // Remove warning
             window.removeEventListener('beforeunload', confirmExit);

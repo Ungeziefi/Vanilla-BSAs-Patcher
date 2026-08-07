@@ -108,7 +108,7 @@ def process_bsas_thread(data_path, custom_path, options):
             return eel.processFinished(False)
 
     if os.path.exists(os.path.join(data_path, "Fallout - Meshes2.bsa")):
-        log_to_ui("Error: 'Fallout - Meshes2.bsa' found in Data. Remove it (output of older decompressor versions) and verify game files.")
+        log_to_ui("Error: 'Fallout - Meshes2.bsa' found in Data - it is a remnant from older FNV BSA Decompressor versions. Remove it and verify game files.")
         return eel.processFinished(False)
 
     try:
@@ -125,7 +125,7 @@ def process_bsas_thread(data_path, custom_path, options):
         if free < 8 * 1024**3:
             log_to_ui(f"Error: Insufficient free disk space (required: 8GB, total: {total / (1024**3):.2f}GB, available: {free / (1024**3):.2f}GB).")
             return eel.processFinished(False)
-    except OSError:
+    except OSError as e:
         log_to_ui(f"Warning: Could not check disk space: {e}")
 
     if os.path.normpath(output_dir).lower().startswith(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)").lower()):
@@ -134,7 +134,7 @@ def process_bsas_thread(data_path, custom_path, options):
     log_to_ui("All prechecks passed.")
     log_to_ui()
 
-    backup_dir = os.path.join(data_path, "Vanilla BSAs backup") if is_game_folder else None
+    backup_dir = os.path.join(data_path, "Vanilla BSAs backup") if (is_game_folder and options.get("backup_bsas", True)) else None
     if backup_dir:
         try: os.makedirs(backup_dir, exist_ok=True)
         except OSError as e:
@@ -144,49 +144,32 @@ def process_bsas_thread(data_path, custom_path, options):
     flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
     try:
-        if options.get("verify_hashes"):
-            log_to_ui("Verifying hashes...")
-            active_bsas = []
-            for bsa_name, (expected_hash, is_required) in ALL_BSAS.items():
-                backup_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
-                game_path = os.path.join(data_path, bsa_name)
-                target = backup_path if (backup_dir and os.path.exists(backup_path)) else (game_path if os.path.exists(game_path) else "")
+        active_bsas = []
+        for bsa_name, (expected_hash, is_required) in ALL_BSAS.items():
+            backup_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
+            game_path = os.path.join(data_path, bsa_name)
+            target = backup_path if (backup_dir and os.path.exists(backup_path)) else (game_path if os.path.exists(game_path) else "")
 
-                if not target:
-                    if is_required:
-                        log_to_ui(f"Error: Required file '{bsa_name}' not found!")
-                        return eel.processFinished(False)
-                    log_to_ui(f"Warning: '{bsa_name}' not found, skipping.")
-                    continue
+            if not target:
+                if is_required:
+                    log_to_ui(f"Error: Required file '{bsa_name}' not found!")
+                    return eel.processFinished(False)
+                log_to_ui(f"Warning: '{bsa_name}' not found, skipping.")
+                continue
 
+            if options.get("verify_hashes"):
                 target_hash = calculate_blake3(target)
                 if target_hash != expected_hash:
                     log_to_ui(f"Error: Hash mismatch for '{bsa_name}'! Expected: {expected_hash}, got: {target_hash}")
-                    log_to_ui()
-                    log_to_ui("If your game language is set to English, verify the files. If it is in another language, disable the hash verification option above, as it is only a safety measure.")
                     return eel.processFinished(False)
-                
-                active_bsas.append(bsa_name)
 
+            active_bsas.append(bsa_name)
+
+        if options.get("verify_hashes"):
             log_to_ui("Hashes verified.")
-            log_to_ui()
-            
         else:
             log_to_ui("Hash verification skipped.")
-            log_to_ui()
-            active_bsas = []
-            for bsa_name, (_, is_required) in ALL_BSAS.items():
-                backup_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
-                game_path = os.path.join(data_path, bsa_name)
-                target = backup_path if (backup_dir and os.path.exists(backup_path)) else (game_path if os.path.exists(game_path) else "")
-
-                if not target:
-                    if is_required:
-                        log_to_ui(f"Error: Required file '{bsa_name}' not found!")
-                        return eel.processFinished(False)
-                    log_to_ui(f"Warning: '{bsa_name}' not found, skipping.")
-                    continue
-                active_bsas.append(bsa_name)
+        log_to_ui()
 
         total = len(active_bsas)
         for idx, bsa_name in enumerate(active_bsas):
@@ -196,25 +179,22 @@ def process_bsas_thread(data_path, custom_path, options):
             bsa_path = os.path.join(data_path, bsa_name)
             backup_bsa_path = os.path.join(backup_dir, bsa_name) if backup_dir else ""
 
-            if not os.path.exists(bsa_path) and backup_dir and os.path.exists(backup_bsa_path):
-                bsa_path = backup_bsa_path
-
-            if is_game_folder and os.path.dirname(bsa_path) != backup_dir:
+            if backup_dir:
+                if not os.path.exists(backup_bsa_path):
+                    if os.path.exists(bsa_path):
+                        log_to_ui("Backing up...")
+                        try:
+                            shutil.copy2(bsa_path, backup_bsa_path)
+                        except OSError as e:
+                            log_to_ui(f"Error backing up: {e}")
+                            return eel.processFinished(False)
                 if os.path.exists(backup_bsa_path):
                     bsa_path = backup_bsa_path
-                else:
-                    log_to_ui("Backing up...")
-                    try:
-                        shutil.move(bsa_path, backup_bsa_path)
-                        bsa_path = backup_bsa_path
-                    except OSError as e:
-                        log_to_ui(f"Error backing up: {e}")
-                        return eel.processFinished(False)
 
             # Delta patch
             with tempfile.TemporaryDirectory() as temp_dir:
                 if bsa_name.lower() == "fallout - misc.bsa" and os.path.exists(xdelta_exe):
-                    log_to_ui("Applying delta patch....")
+                    log_to_ui("Applying delta patch...")
                     patched = os.path.join(temp_dir, "Fallout - Misc_patched.bsa")
                     cmd = [xdelta_exe, "-d", "-f", "-s", bsa_path, vcdiff, patched]
                     if subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=flags).returncode == 0:
