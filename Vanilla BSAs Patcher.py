@@ -8,6 +8,7 @@ import tempfile
 import eel
 import tkinter as tk
 import blake3
+import soundfile as sf
 from tkinter import filedialog
 from concurrent.futures import ThreadPoolExecutor
 
@@ -51,26 +52,30 @@ def select_folder():
         return ""
 
 def convert_single_ogg(args):
-    ogg_path, ffmpeg_exe, creation_flags, temp_dir = args
+    ogg_path, temp_dir = args
 
     # Skip same folders as FNV BSA Decompressor except for the Dog ones, which are already in WAV format
     skip_folders = {os.path.normpath(p) for p in ["sound/songs", "sound/fx/mus", "sound/fx/emt/raintoggle"]}
     
-    rel_parts = os.path.normpath(os.path.relpath(ogg_path, temp_dir)).split(os.sep)
-    if any(rel_parts[:len(sf.split(os.sep))] == sf.split(os.sep) for sf in skip_folders):
+    rel_path = os.path.normpath(os.path.relpath(ogg_path, temp_dir))
+    if any(rel_path.startswith(sf) for sf in skip_folders):
         return
 
     wav_path = os.path.splitext(ogg_path)[0] + ".wav"
-    cmd = [ffmpeg_exe, "-y", "-i", ogg_path, "-acodec", "pcm_s16le", wav_path]
-    if subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags).returncode == 0:
-        try: os.remove(ogg_path)
-        except OSError as e: log_to_ui(f"Warning: Failed to remove original OGG file: {e}")
+    try:
+        data, samplerate = sf.read(ogg_path)
+        sf.write(wav_path, data, samplerate, subtype='PCM_16')
+        os.remove(ogg_path)
+    except Exception as e:
+        log_to_ui(f"Error converting '{ogg_path}': {e}")
 
-def convert_audio(temp_dir, current_dir):
-    ffmpeg_exe = os.path.join(current_dir, "ffmpeg.exe")
+def convert_audio(temp_dir):
+    ogg_files = [(os.path.join(r, f), temp_dir) for r, _, files in os.walk(temp_dir) for f in files if f.lower().endswith(".ogg")]
+    
+    if not ogg_files:
+        return
+
     log_to_ui("Converting OGG files to WAV...")
-    flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-    ogg_files = [(os.path.join(r, f), ffmpeg_exe, flags, temp_dir) for r, _, files in os.walk(temp_dir) for f in files if f.lower().endswith(".ogg")]
     with ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 1) - 1)) as executor:
         list(executor.map(convert_single_ogg, ogg_files))
 
@@ -98,11 +103,10 @@ def process_bsas_thread(data_path, custom_path, options):
 
     bsarch_exe = os.path.join(current_dir, "BSArch.exe")
     xdelta_exe = os.path.join(current_dir, "xdelta3.exe")
-    ffmpeg_exe = os.path.join(current_dir, "ffmpeg.exe")
     vcdiff = os.path.join(current_dir, "Fallout - Misc.vcdiff")
 
     log_to_ui("Running prechecks...")
-    for path, name in [(bsarch_exe, "BSArch.exe"), (xdelta_exe, "xdelta3.exe"), (ffmpeg_exe, "ffmpeg.exe"), (vcdiff, "Fallout - Misc.vcdiff")]:
+    for path, name in [(bsarch_exe, "BSArch.exe"), (xdelta_exe, "xdelta3.exe"), (vcdiff, "Fallout - Misc.vcdiff")]:
         if not os.path.exists(path):
             log_to_ui(f"Error: {name} not found. Make sure to extract everything from the downloaded archive.")
             return eel.processFinished(False)
@@ -226,7 +230,7 @@ def process_bsas_thread(data_path, custom_path, options):
                 if options.get("split_mp3"):
                     extract_mp3s(temp_dir, output_dir)
                 if options.get("ogg_to_wav"):
-                    convert_audio(temp_dir, current_dir)
+                    convert_audio(temp_dir)
 
                 log_to_ui("Repacking...")
                 out_bsa = os.path.join(output_dir, bsa_name)
