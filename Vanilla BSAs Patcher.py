@@ -1,16 +1,18 @@
 import os
+import shutil
 import subprocess
 import sys
-import shutil
-import winreg
-import threading
 import tempfile
-import eel
+import threading
 import tkinter as tk
-import blake3
-import soundfile as sf
-from tkinter import filedialog
+import winreg
 from concurrent.futures import ThreadPoolExecutor
+from tkinter import filedialog
+
+import blake3
+import eel
+import soundfile as sf
+import pyxdelta as pxd
 
 ALL_BSAS = {
     "Fallout - Meshes.bsa": ("f7f2179ed7666e282d9308dfca614b134344cba7a033d94deb13cf5cc6be43c4", True),
@@ -56,7 +58,7 @@ def convert_single_ogg(args):
 
     # Skip same folders as FNV BSA Decompressor except for the Dog ones, which are already in WAV format
     skip_folders = {os.path.normpath(p) for p in ["sound/songs", "sound/fx/mus", "sound/fx/emt/raintoggle"]}
-    
+
     rel_path = os.path.normpath(os.path.relpath(ogg_path, temp_dir))
     if any(rel_path.startswith(sf) for sf in skip_folders):
         return
@@ -71,7 +73,7 @@ def convert_single_ogg(args):
 
 def convert_audio(temp_dir):
     ogg_files = [(os.path.join(r, f), temp_dir) for r, _, files in os.walk(temp_dir) for f in files if f.lower().endswith(".ogg")]
-    
+
     if not ogg_files:
         return
 
@@ -102,11 +104,10 @@ def process_bsas_thread(data_path, custom_path, options):
     is_game_folder = (output_dir == data_path)
 
     bsarch_exe = os.path.join(current_dir, "BSArch.exe")
-    xdelta_exe = os.path.join(current_dir, "xdelta3.exe")
     vcdiff = os.path.join(current_dir, "Fallout - Misc.vcdiff")
 
     log_to_ui("Running prechecks...")
-    for path, name in [(bsarch_exe, "BSArch.exe"), (xdelta_exe, "xdelta3.exe"), (vcdiff, "Fallout - Misc.vcdiff")]:
+    for path, name in [(bsarch_exe, "BSArch.exe"), (vcdiff, "Fallout - Misc.vcdiff")]:
         if not os.path.exists(path):
             log_to_ui(f"Error: {name} not found. Make sure to extract everything from the downloaded archive.")
             return eel.processFinished(False)
@@ -197,13 +198,13 @@ def process_bsas_thread(data_path, custom_path, options):
 
             # Delta patch
             with tempfile.TemporaryDirectory() as temp_dir:
-                if bsa_name.lower() == "fallout - misc.bsa" and os.path.exists(xdelta_exe):
+                if bsa_name.lower() == "fallout - misc.bsa":
                     log_to_ui("Applying delta patch...")
                     patched = os.path.join(temp_dir, "Fallout - Misc_patched.bsa")
-                    cmd = [xdelta_exe, "-d", "-f", "-s", bsa_path, vcdiff, patched]
-                    if subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=flags).returncode == 0:
+                    try:
+                        pxd.decode(bsa_path, vcdiff, patched)
                         bsa_path = patched
-                    else:
+                    except Exception:
                         log_to_ui("Error: xdelta failed.")
                         return eel.processFinished(False)
 
