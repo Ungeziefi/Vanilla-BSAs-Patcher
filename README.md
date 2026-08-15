@@ -4,7 +4,7 @@ Nexus Mods page [here](https://www.nexusmods.com/games/newvegas/mods/98738).
 
 ```sh
 uv sync
-uvx pyinstaller --onefile --windowed --icon=web/icon.ico --add-data "web;web" "Vanilla BSAs Patcher.py"
+uv run pyinstaller --onefile --windowed --icon=web/icon.ico --add-data "web;web" "Vanilla BSAs Patcher.py"
 ```
 
 ---
