@@ -1,4 +1,4 @@
-Nexus Mods page [here](https://www.nexusmods.com/games/newvegas/mods/98738).
+Nexus Mods page [here](https://www.nexusmods.com/newvegas/mods/98738).
 
 **Building**
 
