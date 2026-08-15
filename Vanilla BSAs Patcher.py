@@ -5,9 +5,9 @@ import sys
 import tempfile
 import threading
 import tkinter as tk
+from tkinter import filedialog
 import winreg
 from concurrent.futures import ThreadPoolExecutor
-from tkinter import filedialog
 
 import blake3
 import eel
@@ -50,8 +50,8 @@ def select_folder():
         root.destroy()
         return folder or ""
     except Exception as e:
-        log_to_ui(f"Error opening file dialog: {e}")
-        return ""
+        log_to_ui(f"Error opening folder picker: {e}")
+    return ""
 
 def convert_single_ogg(args):
     ogg_path, temp_dir = args
@@ -102,12 +102,19 @@ def process_bsas_thread(data_path, custom_path, options):
     current_dir = os.path.dirname(sys.executable if getattr(sys, 'frozen', False) else __file__)
     output_dir = custom_path or data_path
     is_game_folder = (output_dir == data_path)
+    root_path = os.path.dirname(os.path.normpath(data_path))
 
     bsarch_exe = os.path.join(current_dir, "BSArch.exe")
     vcdiff = os.path.join(current_dir, "Fallout - Misc.vcdiff")
+    vorbis_dlls = ["libvorbis.dll", "libvorbisfile.dll"]
 
     log_to_ui("Running prechecks...")
-    for path, name in [(bsarch_exe, "BSArch.exe"), (vcdiff, "Fallout - Misc.vcdiff")]:
+    required_precheck_files = [(bsarch_exe, "BSArch.exe"), (vcdiff, "Fallout - Misc.vcdiff")]
+    if options.get("upgrade_vorbis"):
+        for dll in vorbis_dlls:
+            required_precheck_files.append((os.path.join(current_dir, dll), dll))
+
+    for path, name in required_precheck_files:
         if not os.path.exists(path):
             log_to_ui(f"Error: {name} not found. Make sure to extract everything from the downloaded archive.")
             return eel.processFinished(False)
@@ -146,7 +153,7 @@ def process_bsas_thread(data_path, custom_path, options):
             log_to_ui(f"Error: Could not create backup directory: {e}")
             return eel.processFinished(False)
 
-    flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+    no_window_flag = subprocess.CREATE_NO_WINDOW
 
     try:
         active_bsas = []
@@ -166,6 +173,7 @@ def process_bsas_thread(data_path, custom_path, options):
                 target_hash = calculate_blake3(target)
                 if target_hash != expected_hash:
                     log_to_ui(f"Error: Hash mismatch for '{bsa_name}'! Expected: {expected_hash}, got: {target_hash}")
+                    log_to_ui("Hash verification requires clean, English game files. Verify your game files, or uncheck the option if using a non-English version.")
                     return eel.processFinished(False)
 
             active_bsas.append(bsa_name)
@@ -175,6 +183,19 @@ def process_bsas_thread(data_path, custom_path, options):
         else:
             log_to_ui("Hash verification skipped.")
         log_to_ui()
+
+        if options.get("upgrade_vorbis"):
+            log_to_ui("Upgrading Vorbis libraries...")
+            try:
+                for dll in vorbis_dlls:
+                    src_dll = os.path.join(current_dir, dll)
+                    dest_dll = os.path.join(root_path, dll)
+                    shutil.copy2(src_dll, dest_dll)
+                log_to_ui("Vorbis libraries upgraded.")
+                log_to_ui()
+            except OSError as e:
+                log_to_ui(f"Error upgrading Vorbis libraries: {e}")
+                return eel.processFinished(False)
 
         total = len(active_bsas)
         for idx, bsa_name in enumerate(active_bsas):
@@ -209,22 +230,20 @@ def process_bsas_thread(data_path, custom_path, options):
                         return eel.processFinished(False)
 
                 log_to_ui("Unpacking...")
-                if subprocess.run([bsarch_exe, "unpack", bsa_path, temp_dir, "-fnv"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=flags).returncode != 0:
+                if subprocess.run([bsarch_exe, "unpack", bsa_path, temp_dir, "-fnv"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=no_window_flag).returncode != 0:
                     log_to_ui("Error: Unpacking failed.")
                     return eel.processFinished(False)
 
-                # Fix Misc archive
                 if bsa_name.lower() == "fallout - misc.bsa":
                     bad_file = os.path.join(temp_dir, "menus", "s.txt")
                     if os.path.exists(bad_file):
                         try: os.remove(bad_file)
                         except OSError: pass
 
-                    # Merge Meshes2 with Misc
                     meshes2_path = os.path.join(output_dir, "Fallout - Meshes2.bsa")
                     if os.path.exists(meshes2_path):
                         log_to_ui("Merging Meshes2 with Misc...")
-                        if subprocess.run([bsarch_exe, "unpack", meshes2_path, temp_dir, "-fnv"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=flags).returncode == 0:
+                        if subprocess.run([bsarch_exe, "unpack", meshes2_path, temp_dir, "-fnv"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=no_window_flag).returncode == 0:
                             try: os.remove(meshes2_path)
                             except OSError: pass
 
@@ -243,7 +262,7 @@ def process_bsas_thread(data_path, custom_path, options):
                 if not options.get("decompress"):
                     pack_cmd.append("-z")
 
-                if subprocess.run(pack_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=flags).returncode != 0:
+                if subprocess.run(pack_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, creationflags=no_window_flag).returncode != 0:
                     log_to_ui("Error: Packing failed.")
                     return eel.processFinished(False)
                 log_to_ui(f"Done with '{bsa_name}'.")
