@@ -13,3 +13,5 @@ uv run pyinstaller --onefile --windowed --icon=web/icon.ico --add-data "web;web"
 Next to the `.py` or the `.exe`:
 - [BSArch](https://www.nexusmods.com/newvegas/mods/64745)
 - Fallout - Misc.vcdiff
+- libvorbis.dll
+- libvorbisfile.dll
