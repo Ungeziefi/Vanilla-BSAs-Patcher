@@ -15,3 +15,4 @@ Next to the `.py` or the `.exe`:
 - Fallout - Misc.vcdiff
 - libvorbis.dll
 - libvorbisfile.dll
+- ogg.dll
