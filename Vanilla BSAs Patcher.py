@@ -106,7 +106,7 @@ def process_bsas_thread(data_path, custom_path, options):
 
     bsarch_exe = os.path.join(current_dir, "BSArch.exe")
     vcdiff = os.path.join(current_dir, "Fallout - Misc.vcdiff")
-    vorbis_dlls = ["libvorbis.dll", "libvorbisfile.dll"]
+    vorbis_dlls = ["libvorbis.dll", "libvorbisfile.dll", "ogg.dll"]
 
     log_to_ui("Running prechecks...")
     required_precheck_files = [(bsarch_exe, "BSArch.exe"), (vcdiff, "Fallout - Misc.vcdiff")]
